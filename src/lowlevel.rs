@@ -1,6 +1,13 @@
 /*lowlevel.rs, low level c++ functions ported into rust with libloading for dynamic loading features.
 
 These features are less safe than the python equivalents so these may or may not be public.
+
+fully safe functions include:
+delete_lifetree'
+delete_pattern
+save_pattern_rle
+save_pattern_mc
+
 */
 
 use libloading::Library;
@@ -23,7 +30,7 @@ pub fn create_lifetree(lib: &Library, maxmem: u16, nlayers: i8) -> Result<*mut c
 	}
 }
 
-pub fn delete_lifetree(lib: &Library, pointer: *mut c_void, nlayers: i8) {
+pub fn delete_lifetree(lib: &Library, pointer: *mut c_void, nlayers: i8) { 
 	unsafe {
 		let unsafe_delete_lifetree: Symbol<unsafe extern fn(*mut c_void,c_int)> =
 			lib.get(b"DeleteLifetree\0").unwrap();
@@ -62,3 +69,19 @@ pub fn save_pattern_mc(lib: &Library, pointer: *mut c_void, filename: &str, head
 		unsafe_save_pattern_mc(pointer, to_const_char(filename).as_ptr(), to_const_char(header).as_ptr(), to_const_char(footer).as_ptr());
 	}
 }
+
+//TODO:: LoadTimelineMC
+//TODO:: SaveTimelineMC
+
+/*Boolean operations:
+and: 0
+or:  1
+xor: 2
+sub: 3
+add: 1
+mul: 4
+matmul: 7
+
+
+
+*/
