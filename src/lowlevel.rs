@@ -12,12 +12,14 @@ use libloading::Library;
 use libloading::Symbol;
 use core::ffi::c_int;
 use core::ffi::c_void;
+use core::ffi::c_longlong;
+use core::ffi::c_ulonglong;
 use std::ffi::CString;
 use std::os::raw::c_char;
 
 fn to_const_char(input: &str) -> CString { return CString::new(input).expect("Unable to perform CString::new");}
 
-pub unsafe fn create_lifetree(lib: &Library, maxmem: u16, nlayers: i8) -> Result<*mut c_void, &'static str> {// maybe change maxmem and nlayer format in the future
+pub unsafe fn create_lifetree(lib: &Library, maxmem: u16, nlayers: i8) -> Result<*mut c_void, &'static str> {// tested successfully.
 	if nlayers < -1 {return Err("nlayers should be more than -2")};
 	if maxmem < 1000 {println!("Warning! maxmem for a lifetree should be more than 1000!")};
 	unsafe {
@@ -52,7 +54,7 @@ pub unsafe fn delete_pattern(lib: &Library, pointer: *mut c_void) {
 	}
 }
 
-pub unsafe fn save_pattern_rle(lib: &Library, pointer: *mut c_void, filename: &str, header: &str, footer: &str) {
+pub unsafe fn save_pattern_rle(lib: &Library, pointer: *mut c_void, filename: &str, header: &str, footer: &str) {  //tested successfully
 	unsafe {
 		let unsafe_save_pattern_rle:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char, *const c_char)> =
 			lib.get(b"SavePatternRLE\0").unwrap();
@@ -81,7 +83,8 @@ mul: 4
 matmul: 7 
 */
 
-pub unsafe fn boolean_pattern_immutable(lib: &Library, pointer1: *mut c_void, pointer2: *mut c_void, op: u8) -> Result<*mut c_void, &'static str> {
+pub unsafe fn boolean_pattern_immutable(lib: &Library, pointer1: *mut c_void, pointer2: *mut c_void, op: u8) -> Result<*mut c_void, &'static str> { //tested successfully
+	//the difference between the mutable and immutable boolean operations is that immutable creates a new pattern while mutable memorizes an existing one.
 	if op > 7 {return Err("operation code must be between 0 and 7")};
 	unsafe {
 		let unsafe_boolean_pattern_immutable:Symbol<unsafe extern fn(*mut c_void, *mut c_void, c_int) -> *mut c_void> =
@@ -91,7 +94,7 @@ pub unsafe fn boolean_pattern_immutable(lib: &Library, pointer1: *mut c_void, po
 	}
 }
 
-pub unsafe fn boolean_pattern_mutable(lib: &Library, pointer1: *mut c_void, pointer2: *mut c_void, op: u8) {
+pub unsafe fn boolean_pattern_mutable(lib: &Library, pointer1: *mut c_void, pointer2: *mut c_void, op: u8) { //tested successfully
 	if op > 7 {panic!("operation code must be between 0 and 7")};
 	unsafe {
 		let unsafe_boolean_pattern_mutable:Symbol<unsafe extern fn(*mut c_void, *mut c_void, c_int) -> *mut c_void> =
@@ -100,20 +103,59 @@ pub unsafe fn boolean_pattern_mutable(lib: &Library, pointer1: *mut c_void, poin
 	}
 }
 
-pub unsafe fn create_pattern_from_file(lib: &Library, lifetreepointer: *mut c_void, filename: &str) -> Result<*mut c_void, &'static str>{
+pub unsafe fn create_pattern_from_file(lib: &Library, lifetree: *mut c_void, filename: &str) -> Result<*mut c_void, &'static str>{
 	unsafe {
 		let unsafe_create_pattern_from_file:Symbol<unsafe extern fn(*mut c_void, *const c_char) -> *mut c_void> = 
 			lib.get(b"CreatePatternFromFile\0").unwrap();
-		let result = unsafe_create_pattern_from_file(lifetreepointer, to_const_char(filename).as_ptr());
+		let result = unsafe_create_pattern_from_file(lifetree, to_const_char(filename).as_ptr());
 		return Ok(result)
 	}
 }
 
-pub unsafe fn create_pattern_from_file_contents(lib: &Library, lifetreepointer: *mut c_void, contents: &str) -> Result<*mut c_void, &'static str>{
+pub unsafe fn create_pattern_from_file_contents(lib: &Library, lifetree: *mut c_void, contents: &str) -> Result<*mut c_void, &'static str>{ //tested successfully
 	unsafe {
 		let unsafe_create_pattern_from_file_contents:Symbol<unsafe extern fn(*mut c_void, *const c_char) -> *mut c_void> = 
 			lib.get(b"CreatePatternFromFileContents\0").unwrap();
-		let result = unsafe_create_pattern_from_file_contents(lifetreepointer, to_const_char(contents).as_ptr());
+		let result = unsafe_create_pattern_from_file_contents(lifetree, to_const_char(contents).as_ptr());
+		return Ok(result)
+	}
+}
+
+pub unsafe fn create_rectangle(lib: &Library, lifetree: *mut c_void, x: i64, y: i64, width: u64, height: u64, rule: &str) -> Result<*mut c_void, &'static str>{
+	//not sure if longlong is the correct format for this. the internal c++ lifelib function (see lifetree_abstract.h) uses int64_t and uint64_t,
+	//but the c function in lifelib.cpp uses plain old int.
+	//further testing needed.
+	unsafe {
+		let unsafe_create_rectangle:Symbol<unsafe extern fn(*mut c_void, c_longlong, c_longlong, c_ulonglong, c_ulonglong, *const c_char) -> *mut c_void> =
+			lib.get(b"CreateRectangle\0").unwrap();
+		let result = unsafe_create_rectangle(lifetree, x.into(), y.into(), width.into(), height.into(), to_const_char(rule).as_ptr());
+		return Ok(result)
+	}
+}
+
+pub unsafe fn create_pattern_from_rle(lib: &Library, lifetree: *mut c_void, rle: &str, rule: &str) -> Result<*mut c_void, &'static str> { //tested successfully
+	unsafe {
+		let unsafe_create_pattern_from_rle:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char) -> *mut c_void> =
+			lib.get(b"CreatePatternFromRLE\0").unwrap();
+		let result = unsafe_create_pattern_from_rle(lifetree, to_const_char(rle).as_ptr(), to_const_char(rule).as_ptr());
+		return Ok(result)
+	}
+}
+
+pub unsafe fn hashsoup(lib: &Library, pointer: *mut c_void, rule: &str, symmetry: &str, seed: &str) -> Result<*mut c_void, &'static str> { //tested successfully
+	unsafe {
+		let unsafe_hashsoup:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char, *const c_char) -> *mut c_void> =
+			lib.get(b"Hashsoup\0").unwrap();
+		let result = unsafe_hashsoup(pointer, to_const_char(rule).as_ptr(), to_const_char(symmetry).as_ptr(), to_const_char(seed).as_ptr());
+		return Ok(result)
+	}
+}
+
+pub unsafe fn advance_pattern(lib: &Library, pattern: *mut c_void, numgens: i64, exponent: u64) -> Result<*mut c_void, &'static str> {
+	unsafe {
+		let unsafe_advance_pattern:Symbol<unsafe extern fn(*mut c_void, c_longlong, c_ulonglong) -> *mut c_void> =
+			lib.get(b"AdvancePattern\0").unwrap();
+		let result = unsafe_advance_pattern(pattern, numgens.into(), exponent.into());
 		return Ok(result)
 	}
 }
