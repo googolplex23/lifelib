@@ -5,12 +5,14 @@ These features are less safe than the python equivalents so these may or may not
 All of these functions are unsafe because there's nothing stopping you from putting in incorrect c_voids. 
 The higher level functions should prevent this pretty handily but using these functions on their own is not advised.
 
-Other reasons that these are unsafe and can cause memory leaks is that it us up to 
+Other reasons that these are unsafe and can cause memory leaks is that it us up to the user to call delete functions or the memory remains in use (!!)
+Destructor Functions for higher level functions should avoid this.
 */
 
 use libloading::Library;
 use libloading::Symbol;
 use core::ffi::c_int;
+use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::ffi::c_longlong;
 use core::ffi::c_ulonglong;
@@ -151,7 +153,7 @@ pub unsafe fn hashsoup(lib: &Library, pointer: *mut c_void, rule: &str, symmetry
 	}
 }
 
-pub unsafe fn advance_pattern(lib: &Library, pattern: *mut c_void, numgens: i64, exponent: u64) -> Result<*mut c_void, &'static str> {
+pub unsafe fn advance_pattern(lib: &Library, pattern: *mut c_void, numgens: i64, exponent: u64) -> Result<*mut c_void, &'static str> { //works!! hooray!!
 	unsafe {
 		let unsafe_advance_pattern:Symbol<unsafe extern fn(*mut c_void, c_longlong, c_ulonglong) -> *mut c_void> =
 			lib.get(b"AdvancePattern\0").unwrap();
@@ -159,3 +161,45 @@ pub unsafe fn advance_pattern(lib: &Library, pattern: *mut c_void, numgens: i64,
 		return Ok(result)
 	}
 }
+
+//TODO: GetSemisolid and GetSolid. Still not entirely sure what these do.
+
+pub unsafe fn bitshift_pattern(lib: &Library, pattern: *mut c_void, shift: i32) -> Result<*mut c_void, &'static str> {//this could have higher bitshifts. consider changing to i64 or larger.
+	unsafe {
+		let unsafe_bitshift_pattern:Symbol<unsafe extern fn(*mut c_void, c_int) -> *mut c_void> =
+			lib.get(b"BitshiftPattern\0").unwrap();
+		let result = unsafe_bitshift_pattern(pattern, shift.into());
+		return Ok(result)
+	}
+}
+
+pub unsafe fn shift_pattern(lib: &Library, pattern: *mut c_void, x: i64, y: i64, exponent: u32) -> Result<*mut c_void, &'static str> {//maybe change x and y types?
+	unsafe {
+		let unsafe_shift_pattern:Symbol<unsafe extern fn(*mut c_void, c_longlong, c_longlong, c_uint) -> *mut c_void> = 
+			lib.get(b"ShiftPattern\0").unwrap();
+		let result = unsafe_shift_pattern(pattern, x.into(), y.into(), exponent.into());
+		return Ok(result)
+	}
+}
+
+//TODO: GetPatternBox GetPatternDigest
+
+
+pub unsafe fn get_pattern_digest(lib: &Library, pattern: *mut c_void) -> Result<*mut u64, &'static str> {
+	unsafe {
+		let unsafe_get_pattern_digest:Symbol<unsafe extern fn(*mut c_void) -> *mut c_ulonglong> =
+			lib.get(b"GetPatternDigest\0").unwrap();
+		let result = unsafe_get_pattern_digest(pattern);
+		return Ok(result.into())
+	}
+}
+
+pub unsafe fn get_pattern_octodigest(lib: &Library, pattern: *mut c_void) -> Result<*mut u64, &'static str> {
+	unsafe {
+		let unsafe_get_pattern_octodigest:Symbol<unsafe extern fn(*mut c_void) -> *mut c_ulonglong> =
+			lib.get(b"GetPatternOctodigest\0").unwrap();
+		let result = unsafe_get_pattern_octodigest(pattern);
+		return Ok(result.into())
+	}
+}
+
