@@ -19,7 +19,7 @@ use core::ffi::c_ulonglong;
 use std::ffi::CString;
 use std::os::raw::c_char;
 
-fn to_const_char(input: &str) -> CString { return CString::new(input).expect("Unable to perform CString::new");}
+fn to_c_string(input: &str) -> CString { return CString::new(input).expect("Unable to perform CString::new");}
 
 pub unsafe fn create_lifetree(lib: &Library, maxmem: u16, nlayers: i8) -> Result<*mut c_void, &'static str> {// tested successfully.
 	if nlayers < -1 {return Err("nlayers should be more than -2")};
@@ -60,7 +60,7 @@ pub unsafe fn save_pattern_rle(lib: &Library, pointer: *mut c_void, filename: &s
 	unsafe {
 		let unsafe_save_pattern_rle:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char, *const c_char)> =
 			lib.get(b"SavePatternRLE\0").unwrap();
-		unsafe_save_pattern_rle(pointer, to_const_char(filename).as_ptr(), to_const_char(header).as_ptr(), to_const_char(footer).as_ptr());
+		unsafe_save_pattern_rle(pointer, to_c_string(filename).as_ptr(), to_c_string(header).as_ptr(), to_c_string(footer).as_ptr());
 	}
 }
 
@@ -68,7 +68,7 @@ pub unsafe fn save_pattern_mc(lib: &Library, pointer: *mut c_void, filename: &st
 	unsafe {
 		let unsafe_save_pattern_mc:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char, *const c_char)> =
 			lib.get(b"SavePatternMC\0").unwrap();
-		unsafe_save_pattern_mc(pointer, to_const_char(filename).as_ptr(), to_const_char(header).as_ptr(), to_const_char(footer).as_ptr());
+		unsafe_save_pattern_mc(pointer, to_c_string(filename).as_ptr(), to_c_string(header).as_ptr(), to_c_string(footer).as_ptr());
 	}
 }
 
@@ -109,7 +109,7 @@ pub unsafe fn create_pattern_from_file(lib: &Library, lifetree: *mut c_void, fil
 	unsafe {
 		let unsafe_create_pattern_from_file:Symbol<unsafe extern fn(*mut c_void, *const c_char) -> *mut c_void> = 
 			lib.get(b"CreatePatternFromFile\0").unwrap();
-		let result = unsafe_create_pattern_from_file(lifetree, to_const_char(filename).as_ptr());
+		let result = unsafe_create_pattern_from_file(lifetree, to_c_string(filename).as_ptr());
 		return Ok(result)
 	}
 }
@@ -118,7 +118,7 @@ pub unsafe fn create_pattern_from_file_contents(lib: &Library, lifetree: *mut c_
 	unsafe {
 		let unsafe_create_pattern_from_file_contents:Symbol<unsafe extern fn(*mut c_void, *const c_char) -> *mut c_void> = 
 			lib.get(b"CreatePatternFromFileContents\0").unwrap();
-		let result = unsafe_create_pattern_from_file_contents(lifetree, to_const_char(contents).as_ptr());
+		let result = unsafe_create_pattern_from_file_contents(lifetree, to_c_string(contents).as_ptr());
 		return Ok(result)
 	}
 }
@@ -130,7 +130,7 @@ pub unsafe fn create_rectangle(lib: &Library, lifetree: *mut c_void, x: i64, y: 
 	unsafe {
 		let unsafe_create_rectangle:Symbol<unsafe extern fn(*mut c_void, c_longlong, c_longlong, c_ulonglong, c_ulonglong, *const c_char) -> *mut c_void> =
 			lib.get(b"CreateRectangle\0").unwrap();
-		let result = unsafe_create_rectangle(lifetree, x.into(), y.into(), width.into(), height.into(), to_const_char(rule).as_ptr());
+		let result = unsafe_create_rectangle(lifetree, x.into(), y.into(), width.into(), height.into(), to_c_string(rule).as_ptr());
 		return Ok(result)
 	}
 }
@@ -139,7 +139,7 @@ pub unsafe fn create_pattern_from_rle(lib: &Library, lifetree: *mut c_void, rle:
 	unsafe {
 		let unsafe_create_pattern_from_rle:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char) -> *mut c_void> =
 			lib.get(b"CreatePatternFromRLE\0").unwrap();
-		let result = unsafe_create_pattern_from_rle(lifetree, to_const_char(rle).as_ptr(), to_const_char(rule).as_ptr());
+		let result = unsafe_create_pattern_from_rle(lifetree, to_c_string(rle).as_ptr(), to_c_string(rule).as_ptr());
 		return Ok(result)
 	}
 }
@@ -148,7 +148,7 @@ pub unsafe fn hashsoup(lib: &Library, pointer: *mut c_void, rule: &str, symmetry
 	unsafe {
 		let unsafe_hashsoup:Symbol<unsafe extern fn(*mut c_void, *const c_char, *const c_char, *const c_char) -> *mut c_void> =
 			lib.get(b"Hashsoup\0").unwrap();
-		let result = unsafe_hashsoup(pointer, to_const_char(rule).as_ptr(), to_const_char(symmetry).as_ptr(), to_const_char(seed).as_ptr());
+		let result = unsafe_hashsoup(pointer, to_c_string(rule).as_ptr(), to_c_string(symmetry).as_ptr(), to_c_string(seed).as_ptr());
 		return Ok(result)
 	}
 }
@@ -186,7 +186,7 @@ pub unsafe fn transform_pattern(lib: &Library, pattern: *mut c_void, tfm: &str) 
 	unsafe {
 		let unsafe_transform_pattern:Symbol<unsafe extern fn(*mut c_void, *const c_char) -> *mut c_void> = 
 			lib.get(b"TransformPattern\0").unwrap();
-		let result = unsafe_transform_pattern(pattern, to_const_char(tfm).as_ptr());
+		let result = unsafe_transform_pattern(pattern, to_c_string(tfm).as_ptr());
 		return result
 	}
 }
@@ -258,10 +258,42 @@ pub unsafe fn get_pattern_octodigest(lib: &Library, pattern: *mut c_void) -> *mu
 	}
 }
 
-pub unsafe fn get_compiled_version(lib: &Library, buffer: &str){
-	unsafe {
-		let unsafe_get_compiled_version:Symbol<unsafe extern fn(*const c_char)> =
-			lib.get(b"GetCompiledVersion\0").unwrap();
-		unsafe_get_compiled_version(to_const_char(buffer).as_ptr())
+pub unsafe fn get_rule_of_pattern(lib: &Library, pattern: *mut c_void) -> String{
+	let buffer = CString::new("").unwrap().into_raw();
+ 	unsafe {
+		let unsafe_get_rule_of_pattern:Symbol<unsafe extern fn(*mut c_void, *mut c_char)> =
+			lib.get(b"GetRuleOfPattern\0").unwrap();
+		unsafe_get_rule_of_pattern(pattern, buffer);
+		return CString::from_raw(buffer).into_string().expect("Unable to convert CString back into String")
+	}
 }
 
+
+/*
+
+Leave this here for example of how to modify an existing string
+
+pub unsafe fn get_compiled_version(lib: &Library, buffer: &mut String){
+	let mut new_string = String::new();
+	std::mem::swap(&mut new_string, buffer);
+	//let c_string_buffer = to_c_string(std::mem::take(buffer));
+	let c_string_buffer = CString::new(new_string.into_bytes());
+	let raw_buffer = c_string_buffer.into_raw();
+ 	unsafe {
+		let unsafe_get_compiled_version:Symbol<unsafe extern fn(*mut c_char)> =
+			lib.get(b"GetCompiledVersion\0").unwrap();
+		unsafe_get_compiled_version(raw_buffer);
+		*buffer = CString::from_raw(raw_buffer).into_string().expect("Unable to convert CString back into String")
+	}
+}
+*/
+
+pub unsafe fn get_compiled_version(lib: &Library) -> String{
+	let buffer = CString::new("").unwrap().into_raw();
+ 	unsafe {
+		let unsafe_get_compiled_version:Symbol<unsafe extern fn(*mut c_char)> =
+			lib.get(b"GetCompiledVersion\0").unwrap();
+		unsafe_get_compiled_version(buffer);
+		return CString::from_raw(buffer).into_string().expect("Unable to convert CString back into String")
+	}
+}

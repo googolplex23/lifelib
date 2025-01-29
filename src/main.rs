@@ -4,10 +4,18 @@ mod lowlevel; //maybe this doesn't actually need to be public...
 
 fn main() {
     
-	let library = compile::compile_rules([Some("b3s23"), None, None, None, None, None, None, None]);
+	let library = compile::compile_rules([Some("b3s1"), None, None, None, None, None, None, None]);
 	
 	
 	unsafe {
+		
+		//let mut new_string = String::new();
+		
+		
+		let mut new_string = lowlevel::get_compiled_version(&library);
+		
+		println!("version: {}", new_string);
+		/*
 		let lifetree = lowlevel::create_lifetree(&library, 10000, 17).expect("epic fail!");
 		
 		
@@ -18,7 +26,7 @@ fn main() {
 		let mut testadvance = lowlevel::advance_pattern(&library,andtest2, 10,0).unwrap();
 		lowlevel::save_pattern_rle(&library, testadvance, "hashsouptest.rle", "", "");
 		
-		
+		*/
 	}
 }
 
