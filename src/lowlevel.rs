@@ -5,7 +5,7 @@ These features are less safe than the python equivalents so these may or may not
 All of these functions are unsafe because there's nothing stopping you from putting in incorrect c_voids. 
 The higher level functions should prevent this pretty handily but using these functions on their own is not advised.
 
-Other reasons that these are unsafe and can cause memory leaks is that it us up to the user to call delete functions or the memory remains in use (!!)
+Other reasons that these are unsafe and can cause memory leaks in that it is up to the user to call delete functions or the memory remains in use (!!)
 Destructor Functions for higher level functions should avoid this.
 */
 
@@ -164,12 +164,12 @@ pub unsafe fn advance_pattern(lib: &Library, pattern: *mut c_void, numgens: i64,
 
 //TODO: GetSemisolid and GetSolid. Still not entirely sure what these do.
 
-pub unsafe fn bitshift_pattern(lib: &Library, pattern: *mut c_void, shift: i32) -> Result<*mut c_void, &'static str> {//this could have higher bitshifts. consider changing to i64 or larger.
+pub unsafe fn bitshift_pattern(lib: &Library, pattern: *mut c_void, shift: i32) -> *mut c_void{//this could have higher bitshifts. consider changing to i64 or larger.
 	unsafe {
 		let unsafe_bitshift_pattern:Symbol<unsafe extern fn(*mut c_void, c_int) -> *mut c_void> =
 			lib.get(b"BitshiftPattern\0").unwrap();
 		let result = unsafe_bitshift_pattern(pattern, shift.into());
-		return Ok(result)
+		return result
 	}
 }
 
@@ -182,24 +182,86 @@ pub unsafe fn shift_pattern(lib: &Library, pattern: *mut c_void, x: i64, y: i64,
 	}
 }
 
-//TODO: GetPatternBox GetPatternDigest
+pub unsafe fn transform_pattern(lib: &Library, pattern: *mut c_void, tfm: &str) -> *mut c_void{
+	unsafe {
+		let unsafe_transform_pattern:Symbol<unsafe extern fn(*mut c_void, *const c_char) -> *mut c_void> = 
+			lib.get(b"TransformPattern\0").unwrap();
+		let result = unsafe_transform_pattern(pattern, to_const_char(tfm).as_ptr());
+		return result
+	}
+}
 
+//TODO: MakeSpaceshipStream FindConnectedComponent
 
-pub unsafe fn get_pattern_digest(lib: &Library, pattern: *mut c_void) -> Result<*mut u64, &'static str> {
+pub unsafe fn get_one_cell(lib: &Library, pattern: *mut c_void) -> *mut c_void{
+	unsafe {
+		let unsafe_get_one_cell: Symbol<unsafe extern fn(*mut c_void) -> *mut c_void> =
+			lib.get(b"GetOneCell\0").unwrap();
+		return unsafe_get_one_cell(pattern)
+	}
+}
+
+pub unsafe fn match_live(lib: &Library, pattern: *mut c_void, pattern1: *mut c_void) -> *mut c_void{
+	unsafe {
+		let unsafe_match_live: Symbol<unsafe extern fn(*mut c_void, *mut c_void) -> *mut c_void> =
+			lib.get(b"MatchLive\0").unwrap();
+		return unsafe_match_live(pattern, pattern1)
+	}
+}
+
+pub unsafe fn copy_pattern(lib: &Library, pattern: *mut c_void) -> *mut c_void{
+	unsafe {
+		let unsafe_copy_pattern: Symbol<unsafe extern fn(*mut c_void) -> *mut c_void> =
+			lib.get(b"CopyPattern\0").unwrap();
+		return unsafe_copy_pattern(pattern)
+	}
+}
+
+pub unsafe fn match_live_and_dead(lib: &Library, pattern: *mut c_void, pattern1: *mut c_void, pattern0: *mut c_void) -> *mut c_void{
+	unsafe {
+		let unsafe_match_live_and_dead: Symbol<unsafe extern fn(*mut c_void, *mut c_void, *mut c_void) -> *mut c_void> =
+			lib.get(b"MatchLiveAndDead\0").unwrap();
+		return unsafe_match_live_and_dead(pattern, pattern1, pattern0)
+	}
+}
+
+//TODO: FindPeriodOrAdvance
+//		^^^ Need to figure out nullptr handling with libloading 
+
+pub unsafe fn get_population_of_pattern(lib: &Library, pattern: *mut c_void, modprime: i32) -> *mut i32{
+	unsafe {
+		let unsafe_get_population_of_pattern:Symbol<unsafe extern fn(*mut c_void, c_int) -> *mut c_int> =
+			lib.get(b"GetPopulationOfPattern\0").unwrap();
+		let result = unsafe_get_population_of_pattern(pattern, modprime.into());
+		return result.into()
+	}
+}
+
+//TODO: GetPatternBox
+//		^^^ Figure out GetPatternBox return format
+
+pub unsafe fn get_pattern_digest(lib: &Library, pattern: *mut c_void) -> *mut u64{
 	unsafe {
 		let unsafe_get_pattern_digest:Symbol<unsafe extern fn(*mut c_void) -> *mut c_ulonglong> =
 			lib.get(b"GetPatternDigest\0").unwrap();
 		let result = unsafe_get_pattern_digest(pattern);
-		return Ok(result.into())
+		return result.into()
 	}
 }
 
-pub unsafe fn get_pattern_octodigest(lib: &Library, pattern: *mut c_void) -> Result<*mut u64, &'static str> {
+pub unsafe fn get_pattern_octodigest(lib: &Library, pattern: *mut c_void) -> *mut u64{
 	unsafe {
 		let unsafe_get_pattern_octodigest:Symbol<unsafe extern fn(*mut c_void) -> *mut c_ulonglong> =
 			lib.get(b"GetPatternOctodigest\0").unwrap();
 		let result = unsafe_get_pattern_octodigest(pattern);
-		return Ok(result.into())
+		return result.into()
 	}
+}
+
+pub unsafe fn get_compiled_version(lib: &Library, buffer: &str){
+	unsafe {
+		let unsafe_get_compiled_version:Symbol<unsafe extern fn(*const c_char)> =
+			lib.get(b"GetCompiledVersion\0").unwrap();
+		unsafe_get_compiled_version(to_const_char(buffer).as_ptr())
 }
 
